@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 
 namespace ClientTracker
 {
@@ -8,6 +9,7 @@ namespace ClientTracker
         public string Category = string.Empty;
         public string Request = string.Empty;
         public string StatusCode = string.Empty;
+        //public JToken Values;
         public string Values = string.Empty;
         public string RawData = string.Empty;
 

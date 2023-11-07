@@ -16,7 +16,7 @@ namespace ClientTracker {
                 try
                 {
                     socket = new TcpClient(host, port);
-                    Console.Out.WriteLine("socket on : " + host + ":" + port);
+                    Console.Out.WriteLine("## Socket on : " + host + ":" + port);
                 }
                 catch (Exception ex)
                 {
@@ -74,28 +74,29 @@ namespace ClientTracker {
                         p.Category = (string)jObject["category"];
                         p.Request = (string)jObject["request"];
                         p.StatusCode = (string)jObject["statuscode"];
+                        //p.Values = jObject["values"];
 
                         JToken values = jObject.GetValue("values");
 
                         if (values != null)
                         {
                             /* 
-                            We can further parse the Key-Value pairs from the values here.
-                            For example using a switch on the Category and/or Request 
-                            to create Gaze Data or CalibrationResult objects and pass these 
-                            via separate events.
+                              We can further parse the Key-Value pairs from the values here.
+                              For example using a switch on the Category and/or Request 
+                              to create Gaze Data or CalibrationResult objects and pass these 
+                              via separate events.
 
-                            To get the estimated gaze coordinate (on-screen pixels):
-                            JObject gaze = JObject.Parse(jFrame.SelectToken("avg").ToString());
-                            double gazeX = (double) gaze.Property("x").Value;
-                            double gazeY = (double) gaze.Property("y").Value;
+                              To get the estimated gaze coordinate (on-screen pixels):
+                              JObject gaze = JObject.Parse(jFrame.SelectToken("avg").ToString());
+                              double gazeX = (double) gaze.Property("x").Value;
+                              double gazeY = (double) gaze.Property("y").Value;
                             */
                         }
 
                         // Raise event with the data
-                        if(OnData != null)
-                        OnData(this, new ReceivedDataEventArgs(p));
-                    }
+                        if (OnData != null)
+                            OnData(this, new ReceivedDataEventArgs(p));
+                        }
                     catch (Exception ex)
                     {
                         Console.Out.WriteLine("Error while reading response: " + ex.Message);

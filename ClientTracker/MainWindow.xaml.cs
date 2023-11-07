@@ -28,7 +28,7 @@ namespace ClientTracker
         private bool isCalibrated;
 
         private string host = "127.0.0.1";
-        private int port = 9999; 
+        private int port = 9009; 
 
         // private Gazepoint gazepoint = new GazePoint();
         private SocketManager socket = new SocketManager();
