@@ -5,6 +5,8 @@ VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CalibrationSample", "Calibration\CalibrationSample.csproj", "{C6D4DFEB-1D02-4719-8E98-C95E44C86991}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultideviceCalibration", "MultideviceCalibration\MultideviceCalibration.csproj", "{783767D8-2AE5-4AAF-A801-9090EF0AB424}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientTracker", "ClientTracker\ClientTracker.csproj", "{4691094B-9B30-4AA6-9C42-4875DADB0BF7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scroll", "Scroll\Scroll.csproj", "{7B698B00-8697-419A-B884-95E84A7E0FB7}"
@@ -19,6 +21,10 @@ Global
 		{C6D4DFEB-1D02-4719-8E98-C95E44C86991}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C6D4DFEB-1D02-4719-8E98-C95E44C86991}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C6D4DFEB-1D02-4719-8E98-C95E44C86991}.Release|Any CPU.Build.0 = Release|Any CPU
+		{783767D8-2AE5-4AAF-A801-9090EF0AB424}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{783767D8-2AE5-4AAF-A801-9090EF0AB424}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{783767D8-2AE5-4AAF-A801-9090EF0AB424}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{783767D8-2AE5-4AAF-A801-9090EF0AB424}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4691094B-9B30-4AA6-9C42-4875DADB0BF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4691094B-9B30-4AA6-9C42-4875DADB0BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4691094B-9B30-4AA6-9C42-4875DADB0BF7}.Release|Any CPU.ActiveCfg = Release|Any CPU

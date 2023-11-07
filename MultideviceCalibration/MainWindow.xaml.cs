@@ -17,6 +17,8 @@ using EyeTribe.ClientSdk.Data;
 using System.Windows.Interop;
 using EyeTribe.ClientSdk;
 using MessageBox = System.Windows.MessageBox;
+using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Calibration
 {
@@ -25,10 +27,16 @@ namespace Calibration
         private Screen activeScreen = Screen.PrimaryScreen;
         private CursorControl cursorControl;
 
-        private bool isCalibrated;
+        private string host = "127.0.0.1";
+        private int[] ports = {8008, 9009}; //8008 should be the left one
 
-        private string _host = "localhost";
-        private int _port = 9999; 
+        bool isCalibrated = false;
+
+        private static int maxTrackers = 2;
+
+        private Tracker[] trackers = new Tracker[maxTrackers];
+        private Tracker currentTracker;
+        private TrackBoxStatus trackbox;
 
         public MainWindow()
         {
@@ -37,20 +45,63 @@ namespace Calibration
             this.KeyDown += MainWindow_KeyDown;
         }
 
-        private void InitClient()
+        private void DeactivateTracker(Tracker tracker)
+        {
+            tracker.gazeManager.Deactivate();
+            tracker.gazeManager.RemoveConnectionStateListener(this);
+        }
+
+        private void ActivateTracker(Tracker tracker)
         {
             // Activate/connect client
-            GazeManager.Instance.Activate(GazeManager.ApiVersion.VERSION_1_0, GazeManager.ClientMode.Push);
-
             // Listen for changes in connection to server
-            GazeManager.Instance.AddConnectionStateListener(this);
+            tracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, tracker.host, tracker.port);
+            tracker.gazeManager.AddConnectionStateListener(this);
+        }
+
+
+        private Tracker InitTrackerClient(int INDEX_TRACKER)
+        {
+            Tracker _tracker = new Tracker();
+            _tracker.name = "Tracker " + INDEX_TRACKER;
+            _tracker.host = host;
+            _tracker.port = ports[INDEX_TRACKER];
+            _tracker.gazeManager = GazeManager.Instance;
+
+            return _tracker;
+        }
+
+        private void InitTrackerStatus()
+        {
+            // Add a fresh instance of the trackbox in case we reinitialize the client connection.
+            trackbox = new TrackBoxStatus();
+            TrackingStatusGrid.Children.Clear();
+            TrackingStatusGrid.Children.Add(trackbox);
+        }
+
+        private void InitClient()
+        {
+            activeScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
+            Console.Out.WriteLine("##########################################################");
+            Console.Out.WriteLine(activeScreen);
+            Console.Out.WriteLine(activeScreen.Bounds.Size);
+
+            for (int i = 0; i < maxTrackers; i++)
+                trackers[i] = InitTrackerClient(i);
+
+            currentTracker = trackers[0];
+            ActivateTracker(currentTracker);
+            InitTrackerStatus();
+
+            UpdateTrackerInfo(
+                ((ComboBoxItem)TrackerSelected.SelectedItem).Content.ToString(),
+                ports[TrackerSelected.SelectedIndex],
+                currentTracker.gazeManager.IsActivated
+            );
+
 
             // Fetch current status
-            OnConnectionStateChanged(GazeManager.Instance.IsActivated);
-
-            // Add a fresh instance of the trackbox in case we reinitialize the client connection.
-            TrackingStatusGrid.Children.Clear();
-            TrackingStatusGrid.Children.Add(new TrackBoxStatus());
+            OnConnectionStateChanged(currentTracker.gazeManager.IsActivated);
 
             UpdateState();
         }
@@ -92,19 +143,47 @@ namespace Calibration
             }
 
             if (!IsActivated)
-                GazeManager.Instance.Deactivate();
+                currentTracker.gazeManager.Deactivate();
 
+            UpdateTrackerInfo(currentTracker.name, currentTracker.port, currentTracker.gazeManager.IsActivated);
             UpdateState();
+        }
+
+        public void SelectTracker(object sender, EventArgs e){
+            if (currentTracker != null)
+            {
+                DeactivateTracker(currentTracker);
+                currentTracker = InitTrackerClient(TrackerSelected.SelectedIndex);
+                ActivateTracker(currentTracker);
+                InitTrackerStatus();
+            }
+
+            if (btnCalibrate!= null)
+                OnConnectionStateChanged(currentTracker.gazeManager.IsActivated);
+        }
+
+        public void UpdateTrackerInfo(string trackerName, int trackerPort, bool status)
+        {
+            TrackerName.Text = trackerName;
+            TrackerPort.Text = trackerPort.ToString();
+            TrackerStatus.Text = status ? "Active" : "Inactive";
+
+            if (currentTracker.gazeManager.LastCalibrationResult != null)
+                RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
+            else
+                RatingText.Text = "Calibration not available";
         }
 
         private void ButtonCalibrateClicked(object sender, RoutedEventArgs e)
         {
             // Check connectivitiy status
-            if (GazeManager.Instance.IsActivated == false)
-                InitClient();
-
             // API needs to be active to start calibrating
-            if (GazeManager.Instance.IsActivated)
+            if (!currentTracker.gazeManager.IsActivated)
+            {
+                currentTracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, currentTracker.host, currentTracker.port);
+                UpdateState();
+            }
+            else if (currentTracker.gazeManager.IsActivated)
                 Calibrate();
             else
                 UpdateState(); // show reconnect
@@ -112,7 +191,7 @@ namespace Calibration
 
         private void ButtonMouseClicked(object sender, RoutedEventArgs e)
         {
-            if (GazeManager.Instance.IsCalibrated == false)
+            if (currentTracker.gazeManager.IsCalibrated == false)
                 return;
 
             if (cursorControl == null)
@@ -129,7 +208,7 @@ namespace Calibration
             activeScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
 
             // Initialize and start the calibration
-            CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 9);
+            CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 16);
             calRunner.OnResult += calRunner_OnResult;
             calRunner.Start();
         }
@@ -155,8 +234,9 @@ namespace Calibration
 
         private void UpdateState()
         {
+            Console.Out.WriteLine("tracker status : " + currentTracker.gazeManager.IsActivated + " calibrated : " + currentTracker.gazeManager.IsCalibrated);
             // No connection
-            if (GazeManager.Instance.IsActivated == false)
+            if (currentTracker.gazeManager.IsActivated == false)
             {
                 btnCalibrate.Content = "Connect";
                 btnMouse.Content = "";
@@ -164,7 +244,7 @@ namespace Calibration
                 return;
             }
 
-            if (GazeManager.Instance.IsCalibrated == false)
+            if (currentTracker.gazeManager.IsCalibrated == false)
             {
                 btnCalibrate.Content = "Calibrate";
             }
@@ -178,8 +258,8 @@ namespace Calibration
                 if (cursorControl != null && cursorControl.Enabled)
                     btnMouse.Content = "Mouse control Off";
 
-                if (GazeManager.Instance.LastCalibrationResult != null)
-                    RatingText.Text = RatingFunction(GazeManager.Instance.LastCalibrationResult);
+                if (currentTracker.gazeManager.LastCalibrationResult != null)
+                    RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
             }
         }
 
@@ -207,7 +287,7 @@ namespace Calibration
 
         private void WindowClosed(object sender, EventArgs e)
         {
-            GazeManager.Instance.Deactivate();
+            currentTracker.gazeManager.Deactivate();
         }
     }
 }
