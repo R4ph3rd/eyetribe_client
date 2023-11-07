@@ -21,7 +21,7 @@ Steps
 4. Right-click on the desired ``.csproj`` file and select ``Set as start-up project``
 5. Run using the plain green play button on top. 
 
-| Note: In order to run Eye Tribes in parralel, you'll need to run one Tribe server for each. To do so, use config files :
+> Note: In order to run Eye Tribes in parralel, you'll need to run one Tribe server for each. To do so, use config files :
 
 ```json
 {
@@ -38,3 +38,10 @@ and launch them from a terminal :
 ```bash
 start "" "C:\Program Files (x86)\EyeTribe\Server\EyeTribe.exe" "path\to\config\file\EyeTribe2.cfg"
 ```
+
+Multidevice client
+---
+
+1. Select ``MultideviceCalibration.csproj`` as startup project in VS.
+2. Run the project
+3. Changing of running device for calibration might take few seconds, the window may freeze meanwhile 
