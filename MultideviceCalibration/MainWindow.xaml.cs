@@ -11,7 +11,6 @@ using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Input;
 using EyeTribe.Controls.Calibration;
-using EyeTribe.Controls.Cursor;
 using EyeTribe.Controls.TrackBox;
 using EyeTribe.ClientSdk.Data;
 using System.Windows.Interop;
@@ -127,7 +126,6 @@ namespace Calibration
                     ButtonLogClicked(this, null);
                     break;
 
-                // Turn cursor control off on hitting Escape
                 case Key.Escape:
                     currentTracker.logging = false;
 
@@ -185,20 +183,6 @@ namespace Calibration
 
             UpdateTrackerInfo(currentTracker.name, currentTracker.port, currentTracker.gazeManager.IsActivated);
             UpdateState();
-        }
-
-        public void OnGazeUpdate(GazeData gazeData)
-        {
-            if (currentTracker.logging)
-            {
-                Trace.TraceInformation(Newtonsoft.Json.JsonConvert.SerializeObject(gazeData));
-                Trace.Flush();
-                var x = (int)Math.Round(gazeData.SmoothedCoordinates.X, 0);
-                var y = (int)Math.Round(gazeData.SmoothedCoordinates.Y, 0);
-                if (x == 0 & y == 0) return;
-                // Invoke thread
-                //Dispatcher.BeginInvoke(new Action(() => UpdateState(x, y)));
-            }
         }
 
         #endregion
