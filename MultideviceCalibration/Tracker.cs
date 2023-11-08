@@ -16,6 +16,7 @@ namespace Calibration
         public string name;
         public int port;
         public string host;
+        public bool logging = false;
         public GazeManager gazeManager;
 
         public Tracker()

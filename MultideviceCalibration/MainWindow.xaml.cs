@@ -19,13 +19,14 @@ using EyeTribe.ClientSdk;
 using MessageBox = System.Windows.MessageBox;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Microsoft.Build.Framework;
+using System.Diagnostics;
 
 namespace Calibration
 {
     public partial class MainWindow : IConnectionStateListener
     {
         private Screen activeScreen = Screen.PrimaryScreen;
-        private CursorControl cursorControl;
 
         private string host = "127.0.0.1";
         private int[] ports = {8008, 9009}; //8008 should be the left one
@@ -44,6 +45,8 @@ namespace Calibration
             this.ContentRendered += (sender, args) => InitClient();
             this.KeyDown += MainWindow_KeyDown;
         }
+
+        #region Components initalization
 
         private void DeactivateTracker(Tracker tracker)
         {
@@ -106,6 +109,8 @@ namespace Calibration
             UpdateState();
         }
 
+        #endregion
+
         private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e == null)
@@ -118,90 +123,24 @@ namespace Calibration
                     ButtonCalibrateClicked(this, null);
                     break;
 
-                // Toggle mouse redirect with "M"
-                case Key.M:
-                    ButtonMouseClicked(this, null);
+                case Key.L:
+                    ButtonLogClicked(this, null);
                     break;
 
                 // Turn cursor control off on hitting Escape
                 case Key.Escape:
-                    if (cursorControl != null)
-                        cursorControl.Enabled = false;
+                    currentTracker.logging = false;
 
                     UpdateState();
                     break;
             }
         }
 
-        public void OnConnectionStateChanged(bool IsActivated)
+        #region Gaze API Handlers
+        private void WindowClosed(object sender, EventArgs e)
         {
-            // The connection state listener detects when the connection to the EyeTribe server changes
-            if (btnCalibrate.Dispatcher.Thread != Thread.CurrentThread)
-            {
-                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
-                return;
-            }
-
-            if (!IsActivated)
-                currentTracker.gazeManager.Deactivate();
-
-            UpdateTrackerInfo(currentTracker.name, currentTracker.port, currentTracker.gazeManager.IsActivated);
-            UpdateState();
+            currentTracker.gazeManager.Deactivate();
         }
-
-        public void SelectTracker(object sender, EventArgs e){
-            if (currentTracker != null)
-            {
-                DeactivateTracker(currentTracker);
-                currentTracker = InitTrackerClient(TrackerSelected.SelectedIndex);
-                ActivateTracker(currentTracker);
-                InitTrackerStatus();
-            }
-
-            if (btnCalibrate!= null)
-                OnConnectionStateChanged(currentTracker.gazeManager.IsActivated);
-        }
-
-        public void UpdateTrackerInfo(string trackerName, int trackerPort, bool status)
-        {
-            TrackerName.Text = trackerName;
-            TrackerPort.Text = trackerPort.ToString();
-            TrackerStatus.Text = status ? "Active" : "Inactive";
-
-            if (currentTracker.gazeManager.LastCalibrationResult != null)
-                RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
-            else
-                RatingText.Text = "Calibration not available";
-        }
-
-        private void ButtonCalibrateClicked(object sender, RoutedEventArgs e)
-        {
-            // Check connectivitiy status
-            // API needs to be active to start calibrating
-            if (!currentTracker.gazeManager.IsActivated)
-            {
-                currentTracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, currentTracker.host, currentTracker.port);
-                UpdateState();
-            }
-            else if (currentTracker.gazeManager.IsActivated)
-                Calibrate();
-            else
-                UpdateState(); // show reconnect
-        }
-
-        private void ButtonMouseClicked(object sender, RoutedEventArgs e)
-        {
-            if (currentTracker.gazeManager.IsCalibrated == false)
-                return;
-
-            if (cursorControl == null)
-                cursorControl = new CursorControl(activeScreen, true, true); // Lazy initialization
-            else
-                cursorControl.Enabled = !cursorControl.Enabled; // Toggle on/off
-
-            UpdateState();
-        }
-
         private void Calibrate()
         {
             // Update screen to calibrate where the window currently is
@@ -232,6 +171,90 @@ namespace Calibration
                 MessageBox.Show(this, "Calibration failed, please try again");
         }
 
+        public void OnConnectionStateChanged(bool IsActivated)
+        {
+            // The connection state listener detects when the connection to the EyeTribe server changes
+            if (btnCalibrate.Dispatcher.Thread != Thread.CurrentThread)
+            {
+                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
+                return;
+            }
+
+            if (!IsActivated)
+                currentTracker.gazeManager.Deactivate();
+
+            UpdateTrackerInfo(currentTracker.name, currentTracker.port, currentTracker.gazeManager.IsActivated);
+            UpdateState();
+        }
+
+        public void OnGazeUpdate(GazeData gazeData)
+        {
+            if (currentTracker.logging)
+            {
+                Trace.TraceInformation(Newtonsoft.Json.JsonConvert.SerializeObject(gazeData));
+                Trace.Flush();
+                var x = (int)Math.Round(gazeData.SmoothedCoordinates.X, 0);
+                var y = (int)Math.Round(gazeData.SmoothedCoordinates.Y, 0);
+                if (x == 0 & y == 0) return;
+                // Invoke thread
+                //Dispatcher.BeginInvoke(new Action(() => UpdateState(x, y)));
+            }
+        }
+
+        #endregion
+
+        #region UI 
+
+        public void SelectTracker(object sender, EventArgs e){
+            if (currentTracker != null)
+            {
+                DeactivateTracker(currentTracker);
+                currentTracker = InitTrackerClient(TrackerSelected.SelectedIndex);
+                ActivateTracker(currentTracker);
+                InitTrackerStatus();
+            }
+
+            if (btnCalibrate!= null)
+                OnConnectionStateChanged(currentTracker.gazeManager.IsActivated);
+        }
+
+        public void UpdateTrackerInfo(string trackerName, int trackerPort, bool status)
+        {
+            TrackerName.Text = trackerName;
+            TrackerPort.Text = trackerPort.ToString();s
+            TrackerStatus.Text = status ? "Active" : "Inactive";
+
+            if (currentTracker.gazeManager.LastCalibrationResult != null)
+                RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
+            else
+                RatingText.Text = "Calibration not available";
+        }
+
+        private void ButtonCalibrateClicked(object sender, RoutedEventArgs e)
+        {
+            // Check connectivitiy status
+            // API needs to be active to start calibrating
+            if (!currentTracker.gazeManager.IsActivated)
+            {
+                currentTracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, currentTracker.host, currentTracker.port);
+                UpdateState();
+            }
+            else if (currentTracker.gazeManager.IsActivated)
+                Calibrate();
+            else
+                UpdateState(); // show reconnect
+        }
+
+        private void ButtonLogClicked(object sender, RoutedEventArgs e)
+        {
+            if (currentTracker.gazeManager.IsCalibrated == false)
+                return;
+    
+            currentTracker.logging = !currentTracker.logging; // Toggle on/off
+
+            UpdateState();
+        }
+
         private void UpdateState()
         {
             Console.Out.WriteLine("tracker status : " + currentTracker.gazeManager.IsActivated + " calibrated : " + currentTracker.gazeManager.IsCalibrated);
@@ -239,7 +262,7 @@ namespace Calibration
             if (currentTracker.gazeManager.IsActivated == false)
             {
                 btnCalibrate.Content = "Connect";
-                btnMouse.Content = "";
+                btnLog.Content = "";
                 RatingText.Text = "";
                 return;
             }
@@ -253,10 +276,10 @@ namespace Calibration
                 btnCalibrate.Content = "Recalibrate";
 
                 // Set mouse-button label
-                btnMouse.Content = "Mouse control On";
+                btnLog.Content = "Log On";
 
-                if (cursorControl != null && cursorControl.Enabled)
-                    btnMouse.Content = "Mouse control Off";
+                if (currentTracker.logging)
+                    btnLog.Content = "Log Off";
 
                 if (currentTracker.gazeManager.LastCalibrationResult != null)
                     RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
@@ -285,9 +308,6 @@ namespace Calibration
             return "Calibration Quality: REDO";
         }
 
-        private void WindowClosed(object sender, EventArgs e)
-        {
-            currentTracker.gazeManager.Deactivate();
-        }
+        #endregion
     }
 }
