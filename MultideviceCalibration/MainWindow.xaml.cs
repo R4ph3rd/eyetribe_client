@@ -249,11 +249,29 @@ namespace Calibration
         {
             if (currentTracker.gazeManager.IsCalibrated == false)
                 return;
-    
             currentTracker.logging = !currentTracker.logging; // Toggle on/off
 
             UpdateState();
         }
+
+        // private void ButtonLogAllClicked(object sender, RoutedEventArgs e)
+        // {
+        //     // check that all trackers are calibrated
+        //     foreach(Tracker _tracker in trackers){
+        //         if (!_tracker.gazeManager.IsCalibrated)
+        //             return;
+        //     }
+
+        //     // if so, start clients and logging
+        //     foreach(Tracker _tracker in trackers){
+        //         if (!_tracker.gazeManager.IsActivated){
+        //             ActivateTracker(_tracker);
+        //             currentTracker.logging = !currentTracker.logging; // Toggle on/off
+        //         }
+        //     }
+
+        //     UpdateState();
+        // }
 
         private void UpdateState()
         {
