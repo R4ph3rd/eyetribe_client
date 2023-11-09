@@ -42,36 +42,23 @@ namespace Calibration
         {
             InitializeComponent();
             this.ContentRendered += (sender, args) => InitClient();
-            this.KeyDown += MainWindow_KeyDown;
         }
 
         #region Components initalization
 
-        private void DeactivateTracker(Tracker tracker)
-        {
-            tracker.gazeManager.Deactivate();
-            tracker.gazeManager.RemoveConnectionStateListener(this);
-        }
+        //private void DeactivateTracker(Tracker tracker)
+        //{
+        //    tracker.gazeManager.Deactivate();
+        //    tracker.gazeManager.RemoveConnectionStateListener(this);
+        //}
 
-        private void ActivateTracker(Tracker tracker)
-        {
-            // Activate/connect client
-            // Listen for changes in connection to server
-            tracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, tracker.host, tracker.port);
-            tracker.gazeManager.AddConnectionStateListener(this);
-        }
-
-
-        private Tracker InitTrackerClient(int INDEX_TRACKER)
-        {
-            Tracker _tracker = new Tracker();
-            _tracker.name = "Tracker " + INDEX_TRACKER;
-            _tracker.host = host;
-            _tracker.port = ports[INDEX_TRACKER];
-            _tracker.gazeManager = GazeManager.Instance;
-
-            return _tracker;
-        }
+        //private void ActivateTracker(Tracker tracker)
+        //{
+        //    // Activate/connect client
+        //    // Listen for changes in connection to server
+        //    tracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, tracker.host, tracker.port);
+        //    tracker.gazeManager.AddConnectionStateListener(this);
+        //}
 
         private void InitTrackerStatus()
         {
@@ -89,10 +76,13 @@ namespace Calibration
             Console.Out.WriteLine(activeScreen.Bounds.Size);
 
             for (int i = 0; i < maxTrackers; i++)
-                trackers[i] = InitTrackerClient(i);
+            {
+                trackers[i] = new Tracker("Tracker " + i, host, ports[i]);
+                trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
+            }
 
             currentTracker = trackers[0];
-            ActivateTracker(currentTracker);
+            currentTracker.ActivateTracker();
             InitTrackerStatus();
 
             UpdateTrackerInfo(
@@ -101,44 +91,36 @@ namespace Calibration
                 currentTracker.gazeManager.IsActivated
             );
 
-
-            // Fetch current status
-            OnConnectionStateChanged(currentTracker.gazeManager.IsActivated);
-
             UpdateState();
         }
 
         #endregion
-
-        private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-        {
-            if (e == null)
-                return;
-
-            switch (e.Key)
-            {
-                // Start calibration on hitting "C"
-                case Key.C:
-                    ButtonCalibrateClicked(this, null);
-                    break;
-
-                case Key.L:
-                    ButtonLogClicked(this, null);
-                    break;
-
-                case Key.Escape:
-                    currentTracker.logging = false;
-
-                    UpdateState();
-                    break;
-            }
-        }
 
         #region Gaze API Handlers
         private void WindowClosed(object sender, EventArgs e)
         {
             currentTracker.gazeManager.Deactivate();
         }
+
+        private void ConnectionStateChanged(object sender, bool IsActivated)
+        {
+            // Your code to handle the event
+            Console.WriteLine("SomeEvent received!");
+
+            //The connection state listener detects when the connection to the EyeTribe server changes
+            if (btnCalibrate.Dispatcher.Thread != Thread.CurrentThread)
+            {
+                this.Dispatcher.BeginInvoke(new MethodInvoker(() => OnConnectionStateChanged(IsActivated)));
+                return;
+            }
+
+            if (!IsActivated)
+                currentTracker.gazeManager.Deactivate();
+
+            UpdateTrackerInfo(currentTracker.name, currentTracker.port, currentTracker.gazeManager.IsActivated);
+            UpdateState();
+        }
+
         private void Calibrate()
         {
             // Update screen to calibrate where the window currently is
@@ -192,9 +174,9 @@ namespace Calibration
         public void SelectTracker(object sender, EventArgs e){
             if (currentTracker != null)
             {
-                DeactivateTracker(currentTracker);
-                currentTracker = InitTrackerClient(TrackerSelected.SelectedIndex);
-                ActivateTracker(currentTracker);
+                currentTracker.DeactivateTracker();
+                currentTracker = trackers[TrackerSelected.SelectedIndex];
+                currentTracker.ActivateTracker();
                 InitTrackerStatus();
             }
 
@@ -205,7 +187,7 @@ namespace Calibration
         public void UpdateTrackerInfo(string trackerName, int trackerPort, bool status)
         {
             TrackerName.Text = trackerName;
-            TrackerPort.Text = trackerPort.ToString();s
+            TrackerPort.Text = trackerPort.ToString();
             TrackerStatus.Text = status ? "Active" : "Inactive";
 
             if (currentTracker.gazeManager.LastCalibrationResult != null)
@@ -233,7 +215,8 @@ namespace Calibration
         {
             if (currentTracker.gazeManager.IsCalibrated == false)
                 return;
-            currentTracker.logging = !currentTracker.logging; // Toggle on/off
+
+            currentTracker.ToggleLogging();
 
             UpdateState();
         }
@@ -280,7 +263,7 @@ namespace Calibration
                 // Set mouse-button label
                 btnLog.Content = "Log On";
 
-                if (currentTracker.logging)
+                if (currentTracker.Logging)
                     btnLog.Content = "Log Off";
 
                 if (currentTracker.gazeManager.LastCalibrationResult != null)
