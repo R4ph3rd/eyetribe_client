@@ -48,10 +48,10 @@
 
 
         <Grid x:Name="ButtonControls" VerticalAlignment="Center" Grid.ColumnSpan="2" Grid.Row="1" Height="45">
-            <Button x:Name="btnCalibrate" Content="" Click="ButtonCalibrateClicked" Height="35" Margin="10,0,257,0" VerticalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False" Grid.Column="0" />
-            <Button x:Name="btnLog" Content="" Click="ButtonLogClicked" Height="35" Margin="261,0,10,0" VerticalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False"/>
-            <!--<Button x:Name="btnLogAll" Content="" Click="ButtonLogAllClicked" Height="35" Margin="261,0,10,0" VerticalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False"/>-->
+            <Button x:Name="btnCalibrate" Content="----" Click="ButtonCalibrateClicked" Height="35" Margin="10,0,257,0" VerticalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False" Grid.Column="0" />
+            <Button x:Name="btnLog" Content="---" Click="ButtonLogClicked" Height="35" Margin="261,0,10,0" VerticalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False"/>
         </Grid>
+        <Button x:Name="btnLogAll" Content="Log All" Click="ButtonLogAllClicked" Width="120" Height="35" Margin="120,291,10,0" VerticalAlignment="Center"  HorizontalAlignment="Center" Background="#FF575757" Foreground="White" Focusable="False" Grid.Column="1"/>
 
     </Grid>
 </Window>

@@ -21,6 +21,8 @@ Steps
 4. Right-click on the desired ``.csproj`` file and select ``Set as start-up project``
 5. Run using the plain green play button on top. 
 
+> NB: Calibration starts on the current screen of the EyeTribe window. 
+
 > Note: In order to run Eye Tribes in parralel, you'll need to run one Tribe server for each. To do so, use config files :
 
 ```json

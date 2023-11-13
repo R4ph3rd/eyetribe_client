@@ -46,20 +46,6 @@ namespace Calibration
 
         #region Components initalization
 
-        //private void DeactivateTracker(Tracker tracker)
-        //{
-        //    tracker.gazeManager.Deactivate();
-        //    tracker.gazeManager.RemoveConnectionStateListener(this);
-        //}
-
-        //private void ActivateTracker(Tracker tracker)
-        //{
-        //    // Activate/connect client
-        //    // Listen for changes in connection to server
-        //    tracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, tracker.host, tracker.port);
-        //    tracker.gazeManager.AddConnectionStateListener(this);
-        //}
-
         private void InitTrackerStatus()
         {
             // Add a fresh instance of the trackbox in case we reinitialize the client connection.
@@ -77,8 +63,9 @@ namespace Calibration
 
             for (int i = 0; i < maxTrackers; i++)
             {
-                trackers[i] = new Tracker("Tracker " + i, host, ports[i]);
+                trackers[i] = new Tracker(i, host, ports[i]);
                 trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
+                trackers[i].EmitLoggingChanged += LoggingChanged;
             }
 
             currentTracker = trackers[0];
@@ -171,6 +158,19 @@ namespace Calibration
 
         #region UI 
 
+        public void LoggingChanged(object sender, bool isLogging)
+        {
+            Console.Out.WriteLine("logging changed !"); 
+            bool AreTheyAllLogging = Array.TrueForAll(trackers, (Tracker t) => t.Logging);
+
+            if (AreTheyAllLogging)
+                btnLogAll.Content = "All log off";
+            else
+                btnLogAll.Content = "All log on";
+
+
+        }
+
         public void SelectTracker(object sender, EventArgs e){
             if (currentTracker != null)
             {
@@ -221,24 +221,41 @@ namespace Calibration
             UpdateState();
         }
 
-        // private void ButtonLogAllClicked(object sender, RoutedEventArgs e)
-        // {
-        //     // check that all trackers are calibrated
-        //     foreach(Tracker _tracker in trackers){
-        //         if (!_tracker.gazeManager.IsCalibrated)
-        //             return;
-        //     }
+        private void ButtonLogAllClicked(object sender, RoutedEventArgs e)
+        {
+            Console.Out.WriteLine("All log button");
+            // check that all trackers are calibrated
+            if (!Array.TrueForAll(trackers, (Tracker t) => t.gazeManager.IsCalibrated))
+            {
+                Console.Out.WriteLine("Some trackers are not calibrated.");
+                return;
+            }
+            
 
-        //     // if so, start clients and logging
-        //     foreach(Tracker _tracker in trackers){
-        //         if (!_tracker.gazeManager.IsActivated){
-        //             ActivateTracker(_tracker);
-        //             currentTracker.logging = !currentTracker.logging; // Toggle on/off
-        //         }
-        //     }
+            // if so, start clients and logging
+            foreach (Tracker _tracker in trackers)
+            {
+                if (!_tracker.gazeManager.IsActivated)
+                    _tracker.ActivateGazeListener();
+                    
+                if (!_tracker.Logging)
+                {
+                    _tracker.ToggleLogging();
+                    Console.Out.WriteLine("Start logging on " + _tracker.name);
+                } 
+                
+                else if (_tracker.Logging)
+                {
+                    if (currentTracker.name != _tracker.name) 
+                        _tracker.DeactivateGazeListener();
 
-        //     UpdateState();
-        // }
+                    _tracker.ToggleLogging(false);
+                    Console.Out.WriteLine("Close logging on " + _tracker.name);
+                }
+            }
+
+            UpdateState();
+        }
 
         private void UpdateState()
         {
@@ -269,6 +286,14 @@ namespace Calibration
                 if (currentTracker.gazeManager.LastCalibrationResult != null)
                     RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
             }
+
+            //foreach (Tracker _tracker in trackers)
+            //{
+            //    if (!_tracker.Logging)
+            //    {
+            //        btnLogAll.Content = "Log on";
+            //    }
+            //}
         }
 
         private string RatingFunction(CalibrationResult result)

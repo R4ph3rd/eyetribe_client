@@ -15,7 +15,8 @@ namespace Calibration
         public string host;
         private bool logging = false;
         public GazeManager gazeManager;
-        public event EventHandler<bool> EmitConnectionStateChanged;
+        public event EventHandler<bool> EmitConnectionStateChanged, EmitLoggingChanged;
+
 
         private string logFilePath;
         private TextWriterTraceListener logFileListener;
@@ -29,9 +30,9 @@ namespace Calibration
             set {}
         }
 
-        public Tracker(string _name, string _host, int _port)
+        public Tracker(int indexTracker, string _host, int _port)
         {
-            this.name = _name;
+            this.name = "Tracker " + indexTracker;
             this.host = _host;
             this.port = _port;
             this.gazeManager = GazeManager.Instance;
@@ -66,11 +67,8 @@ namespace Calibration
         {
             if (this.Logging)
             {
-                Trace.TraceInformation(JsonConvert.SerializeObject(gazeData)); //{ [this.name] : 
+                Trace.TraceInformation(JsonConvert.SerializeObject(gazeData));
                 Trace.Flush(); // Flush the trace to ensure it's written to the log file
-                //var x = (int)Math.Round(gazeData.SmoothedCoordinates.X, 0);
-                //var y = (int)Math.Round(gazeData.SmoothedCoordinates.Y, 0);
-                //if (x == 0 & y == 0) return;
             }
         }
 
@@ -82,6 +80,8 @@ namespace Calibration
         public void ToggleLogging()
         {
             this.logging = !this.logging;
+            EmitLoggingChanged?.Invoke(this, this.logging);
+            Console.Out.WriteLine("after event");
 
             if (this.logging)
             {
@@ -94,6 +94,27 @@ namespace Calibration
                 this.DeactivateGazeListener();
                 this.logFileListener.Close();
             }
+
+        }
+
+        public void ToggleLogging(bool l)
+        {
+            this.logging = l;
+            EmitLoggingChanged?.Invoke(this, this.logging);
+            Console.Out.WriteLine("after event bool");
+
+            if (l)
+            {
+                this.ActivateGazeListener();
+                this.logFileListener = new TextWriterTraceListener(logFilePath);
+                Trace.Listeners.Add(logFileListener);
+            }
+            else
+            {
+                this.DeactivateGazeListener();
+                this.logFileListener.Close();
+            }
+
         }
     }
 }
