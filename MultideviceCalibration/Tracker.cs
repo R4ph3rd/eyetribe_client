@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO;
 using Newtonsoft.Json;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Calibration
 {
@@ -18,6 +20,8 @@ namespace Calibration
         public int FPS = 30;
         public GazeManager gazeManager;
         public event EventHandler<bool> EmitConnectionStateChanged, EmitLoggingChanged;
+        private readonly List<GazeData> gazeDataBuffer = new List<GazeData>();
+        private const int BufferThreshold = 50;
 
 
         private string logFilePath;
@@ -70,11 +74,23 @@ namespace Calibration
         {
             if (this.Logging)
             {
-                Task.Run(() =>
+                lock (gazeDataBuffer)
                 {
-                    Trace.TraceInformation(JsonConvert.SerializeObject(gazeData));
-                    Trace.Flush(); // Flush the trace to ensure it's written to the log file
-                });
+                    gazeDataBuffer.Add(gazeData);
+
+                    if (gazeDataBuffer.Count >= BufferThreshold)
+                    {
+                        List<GazeData> bufferCopy = new List<GazeData>(gazeDataBuffer); // Create a copy of the buffer
+                        gazeDataBuffer.Clear(); // Clear the original buffer
+
+                        Task.Run(() =>
+                        {
+                            string serializedData = string.Join("\n", bufferCopy.Select(item => JsonConvert.SerializeObject(item)));
+                            Trace.TraceInformation(serializedData);
+                            Trace.Flush(); // Flush the trace to ensure it's written to the log file
+                        });
+                   }
+                }
             }
         }
 

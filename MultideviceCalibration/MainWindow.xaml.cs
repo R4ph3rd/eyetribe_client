@@ -63,23 +63,16 @@ namespace Calibration
             Console.Out.WriteLine("##########################################################");
             Console.Out.WriteLine(activeScreen);
             Console.Out.WriteLine(activeScreen.Bounds.Size);
-
-            Task[] initializationTasks = new Task[maxTrackers];
-
             for (int i = 0; i < maxTrackers; i++)
             {
                 //trackers[i] = new Tracker(i, host, ports[i]);
                 //trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
                 //trackers[i].EmitLoggingChanged += LoggingChanged;
-                initializationTasks[i] = Task.Run(() =>
-                {
-                    trackers[i] = new Tracker(i, host, ports[i]);
-                    trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
-                    trackers[i].EmitLoggingChanged += LoggingChanged;
-                });
-            }
 
-            Task.WaitAll(initializationTasks);
+                trackers[i] = new Tracker(i, host, ports[i]);
+                trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
+                trackers[i].EmitLoggingChanged += LoggingChanged;
+            }
 
             currentTracker = trackers[0];
             currentTracker.ActivateTracker();
