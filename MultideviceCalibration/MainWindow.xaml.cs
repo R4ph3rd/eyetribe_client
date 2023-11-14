@@ -20,6 +20,9 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Build.Framework;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Reflection;
+using Newtonsoft.Json;
 
 namespace Calibration
 {
@@ -61,12 +64,22 @@ namespace Calibration
             Console.Out.WriteLine(activeScreen);
             Console.Out.WriteLine(activeScreen.Bounds.Size);
 
+            Task[] initializationTasks = new Task[maxTrackers];
+
             for (int i = 0; i < maxTrackers; i++)
             {
-                trackers[i] = new Tracker(i, host, ports[i]);
-                trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
-                trackers[i].EmitLoggingChanged += LoggingChanged;
+                //trackers[i] = new Tracker(i, host, ports[i]);
+                //trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
+                //trackers[i].EmitLoggingChanged += LoggingChanged;
+                initializationTasks[i] = Task.Run(() =>
+                {
+                    trackers[i] = new Tracker(i, host, ports[i]);
+                    trackers[i].EmitConnectionStateChanged += ConnectionStateChanged;
+                    trackers[i].EmitLoggingChanged += LoggingChanged;
+                });
             }
+
+            Task.WaitAll(initializationTasks);
 
             currentTracker = trackers[0];
             currentTracker.ActivateTracker();
@@ -114,17 +127,24 @@ namespace Calibration
             activeScreen = Screen.FromHandle(new WindowInteropHelper(this).Handle);
 
             // Initialize and start the calibration
-            CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 16);
-            calRunner.OnResult += calRunner_OnResult;
-            calRunner.Start();
+            //CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 16);
+            //calRunner.OnResult += calRunner_OnResult;
+            //calRunner.Start();
+
+            Parallel.ForEach(trackers, tracker =>
+            {
+                CalibrationRunner calRunner = new CalibrationRunner(activeScreen, activeScreen.Bounds.Size, 16);
+                calRunner.OnResult += (sender, e) => calRunner_OnResult(sender, e, tracker);
+                calRunner.Start();
+            });
         }
 
-        private void calRunner_OnResult(object sender, CalibrationRunnerEventArgs e)
+        private void calRunner_OnResult(object sender, CalibrationRunnerEventArgs e, Tracker tracker)
         {
             // Invoke on UI thread since we are accessing UI elements
             if (RatingText.Dispatcher.Thread != Thread.CurrentThread)
             {
-                this.Dispatcher.BeginInvoke(new MethodInvoker(() => calRunner_OnResult(sender, e)));
+                this.Dispatcher.BeginInvoke(new MethodInvoker(() => calRunner_OnResult(sender, e, tracker)));
                 return;
             }
 
@@ -202,8 +222,11 @@ namespace Calibration
             // API needs to be active to start calibrating
             if (!currentTracker.gazeManager.IsActivated)
             {
-                currentTracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, currentTracker.host, currentTracker.port);
-                UpdateState();
+                Task.Run(() =>
+                {
+                    currentTracker.gazeManager.Activate(GazeManager.ApiVersion.VERSION_1_0, currentTracker.host, currentTracker.port);
+                    UpdateState();
+                });
             }
             else if (currentTracker.gazeManager.IsActivated)
                 Calibrate();
@@ -286,14 +309,6 @@ namespace Calibration
                 if (currentTracker.gazeManager.LastCalibrationResult != null)
                     RatingText.Text = RatingFunction(currentTracker.gazeManager.LastCalibrationResult);
             }
-
-            //foreach (Tracker _tracker in trackers)
-            //{
-            //    if (!_tracker.Logging)
-            //    {
-            //        btnLogAll.Content = "Log on";
-            //    }
-            //}
         }
 
         private string RatingFunction(CalibrationResult result)

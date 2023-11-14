@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace Calibration
 {
@@ -14,6 +15,7 @@ namespace Calibration
         public int port;
         public string host;
         private bool logging = false;
+        public int FPS = 30;
         public GazeManager gazeManager;
         public event EventHandler<bool> EmitConnectionStateChanged, EmitLoggingChanged;
 
@@ -29,6 +31,7 @@ namespace Calibration
             }
             set {}
         }
+        public bool log = false;
 
         public Tracker(int indexTracker, string _host, int _port)
         {
@@ -67,8 +70,11 @@ namespace Calibration
         {
             if (this.Logging)
             {
-                Trace.TraceInformation(JsonConvert.SerializeObject(gazeData));
-                Trace.Flush(); // Flush the trace to ensure it's written to the log file
+                Task.Run(() =>
+                {
+                    Trace.TraceInformation(JsonConvert.SerializeObject(gazeData));
+                    Trace.Flush(); // Flush the trace to ensure it's written to the log file
+                });
             }
         }
 
@@ -81,7 +87,6 @@ namespace Calibration
         {
             this.logging = !this.logging;
             EmitLoggingChanged?.Invoke(this, this.logging);
-            Console.Out.WriteLine("after event");
 
             if (this.logging)
             {
